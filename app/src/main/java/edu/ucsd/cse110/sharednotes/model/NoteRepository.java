@@ -2,16 +2,24 @@ package edu.ucsd.cse110.sharednotes.model;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.time.LocalDateTime;
 
 public class NoteRepository {
     private final NoteDao dao;
+    NoteAPI api;
+    MutableLiveData<Note> remoteNote;
 
-    public NoteRepository(NoteDao dao) {
+    public NoteRepository(NoteDao dao, NoteAPI api) {
         this.dao = dao;
+        this.api = api;
     }
 
     // Synced Methods
@@ -61,10 +69,11 @@ public class NoteRepository {
 
     public LiveData<List<Note>> getAllLocal() {
         return dao.getAll();
+
     }
 
     public void upsertLocal(Note note) {
-        note.updatedAt = System.currentTimeMillis();
+        note.updatedAt = System.currentTimeMillis()/1000;
         dao.upsert(note);
     }
 
@@ -86,16 +95,25 @@ public class NoteRepository {
 
         // Start by fetching the note from the server _once_ and feeding it into MutableLiveData.
         // Then, set up a background thread that will poll the server every 3 seconds.
-
         // You may (but don't have to) want to cache the LiveData's for each title, so that
         // you don't create a new polling thread every time you call getRemote with the same title.
         // You don't need to worry about killing background threads.
+        remoteNote = new MutableLiveData<Note>();
+        remoteNote.postValue(api.getNoteAsynch(title));
 
-        throw new UnsupportedOperationException("Not implemented yet");
+        var executor = Executors.newSingleThreadScheduledExecutor();
+        ScheduledFuture<?> noteFeature;
+        noteFeature = executor.scheduleAtFixedRate(()->{
+            remoteNote.postValue(api.getNoteByTitle(title));
+        }, 0, 3, TimeUnit.SECONDS);
+
+
+        return remoteNote;
     }
 
     public void upsertRemote(Note note) {
+        note.updatedAt = System.currentTimeMillis()/1000;
+        api.pushNoteAsynch(note);
         // TODO: Implement upsertRemote!
-        throw new UnsupportedOperationException("Not implemented yet");
     }
 }

@@ -20,11 +20,11 @@ public abstract class NoteDatabase extends RoomDatabase {
         return instance;
     }
 
-    private static NoteDatabase make(Context context) {
-        return Room.databaseBuilder(context, NoteDatabase.class, "note_app.db")
-                .allowMainThreadQueries()
-                .build();
-    }
+        private static NoteDatabase make(Context context) {
+            return Room.databaseBuilder(context, NoteDatabase.class, "note_app.db")
+                    .allowMainThreadQueries()
+                    .build();
+        }
 
     @VisibleForTesting
     public static void inject(NoteDatabase testDatabase) {
